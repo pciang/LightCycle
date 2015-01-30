@@ -4,7 +4,7 @@ var secPerFrame = 1 / 24,
 	msPerUpdate = 1000 / 24,
 	SVGNS = 'http://www.w3.org/2000/svg',
 	dotRadius = 3,
-	collisionRange = 2 * dotRadius,
+	collisionRange = 2 * dotRadius - 1,
 	updater = null,
 	ignoreLastRange = 2,
 	dotSpeed = 75,
@@ -14,6 +14,14 @@ function Game(display){
 	this.display = display;
 	this.display_w = 320;
 	this.display_h = 240;
+	
+	// clear SVG for new game
+	(function (){
+		var child;
+		while(child = display.firstChild){
+			display.removeChild(child);
+		}
+	})();
 	
 	// initialize keys
 	// keydown -> true, keyup -> false
@@ -76,9 +84,9 @@ function Game(display){
 		if(!this.playerOne.isAlive && !this.playerTwo.isAlive){
 			alert('Both players are drunk! :P');
 		} else if(!this.playerOne.isAlive){
-			alert('Player one is high! XD');
+			alert('Player one crashed!');
 		} else if(!this.playerTwo.isAlive){
-			alert('Player two is high! XD');
+			alert('Player two crashed!');
 		}
 	}
 }
@@ -87,14 +95,6 @@ function Player(game, x, y, color, keys){
 	this.isAlive = true;
 	this.game = game;
 	this.display = game.display;
-	
-	// clear SVG for new game
-	(function (){
-		var child;
-		while(child = display.firstChild){
-			display.removeChild(child);
-		}
-	})();
 	
 	this.position = game.display.createSVGPoint();
 	this.position.x = x; this.position.y = y;
