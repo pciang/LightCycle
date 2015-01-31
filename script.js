@@ -117,7 +117,8 @@ function Game(display){
 	// initialize keys
 	// keydown -> true, keyup -> false
 	this.keys = {
-		_37: false, _39: false, _65: false, _68: false
+		_37: false, _39: false, _65: false, _68: false,
+		_188: false, _190: false, _67: false, _86: false
 	}
 	
 	document.addEventListener('keyup', function (e){
@@ -137,6 +138,22 @@ function Game(display){
 			case 68:
 				e.preventDefault();
 				this.keys._68 = false;
+				break;
+			case 67:
+				e.preventDefault();
+				this.keys._67 = false;
+				break;
+			case 86:
+				e.preventDefault();
+				this.keys._86 = false;
+				break;
+			case 188:
+				e.preventDefault();
+				this.keys._188 = false;
+				break;
+			case 190:
+				e.preventDefault();
+				this.keys._190 = false;
 				break;
 		}
 	}.bind(this));
@@ -159,27 +176,69 @@ function Game(display){
 				e.preventDefault();
 				this.keys._68 = true;
 				break;
+			case 67:
+				e.preventDefault();
+				this.keys._67 = true;
+				break;
+			case 86:
+				e.preventDefault();
+				this.keys._86 = true;
+				break;
+			case 188:
+				e.preventDefault();
+				this.keys._188 = true;
+				break;
+			case 190:
+				e.preventDefault();
+				this.keys._190 = true;
+				break;
 		}
 	}.bind(this));
 	
-	this.playerOne = null;
-	this.playerTwo = null;
-	this.initialize = function (){
-		this.playerOne = (new Player(this, 540, 360, '#f00', ['_37', '_39'])).initialize();
-		this.playerTwo = (new Player(this, 100, 360, '#00f', ['_65', '_68'])).initialize();
+	this.players = [];
+	this.initialize = function (num_players){
+		// this.playerOne = (new Player(this, 540, 360, '#f00', ['_37', '_39'])).initialize();
+		// this.playerTwo = (new Player(this, 100, 360, '#00f', ['_65', '_68'])).initialize();
+		this.players[num_players - 1] = null;
+		this.players[0] = (new Player(this, 540, 100, '#f00', ['_37', '_39'])).initialize();
+		this.players[1] = (new Player(this, 100, 100, '#00f', ['_65', '_68'])).initialize();
+		if(num_players >= 3){
+			this.players[2] = (new Player(this, 540, 380, '#0f0', ['_188', '_190'])).initialize();
+		}
+		if(num_players >= 4){
+			this.players[3] = (new Player(this, 100, 380, '#0ff', ['_67', '_86'])).initialize();
+		}
+		
 		return this;
 	}
 	
 	this.update = function (delta){
-		this.playerOne.update(delta);
-		this.playerTwo.update(delta);
+		var crashes = [];
+		for(var i = 0, num_players = this.players.length; i < num_players; ++i){
+			if(this.players[i].isAlive){
+				this.players[i].update(delta);
+			}
+			if(!this.players[i].isAlive){
+				crashes.push(i + 1);
+			}
+		}
 		
-		if(!this.playerOne.isAlive && !this.playerTwo.isAlive){
-			alert('Both players crashed!!');
-		} else if(!this.playerOne.isAlive){
-			alert('Player one crashed!');
-		} else if(!this.playerTwo.isAlive){
-			alert('Player two crashed!');
+		if(crashes.length == this.players.length - 1){
+			if(this.players[0].isAlive){
+				alert('Player 1 wins!');
+			} else if(this.players[1].isAlive){
+				alert('Player 2 wins!');
+			} else if(this.players[2].isAlive){
+				alert('Player 3 wins!');
+			} else{
+				alert('Player 4 wins!');
+			}
+			clearInterval(updater);
+			updater = null;
+		} else if(crashes.length == this.players.length){
+			alert('All players crashed!');
+			clearInterval(updater);
+			updater = null;
 		}
 	}
 }
@@ -251,8 +310,6 @@ function Player(game, x, y, color, keys){
 		this.head = dot;
 		
 		if(this.checkCollision()){
-			clearInterval(updater);
-			updater = null;
 			this.isAlive = false;
 		}
 	}
@@ -269,13 +326,14 @@ function Player(game, x, y, color, keys){
 	}
 }
 
-
-
 document.addEventListener('DOMContentLoaded', function (arg){
 	document.addEventListener('keydown', function (e){
 		if(e.keyCode == 32 && updater == null){
 			e.preventDefault();
-			var game = (new Game(document.getElementById('display'))).initialize();
+			var num_players = parseInt(prompt("Please enter the number of player!\n*At least 2, and at most 4", "2")),
+				game = (new Game(document.getElementById('display'))).initialize(
+					Math.min(Math.max(4, num_players), Math.min(Math.max(2, num_players), 4))
+				);
 			updater = setInterval(game.update.bind(game), msPerFrame, secPerFrame);
 		}
 	});
