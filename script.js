@@ -4,16 +4,107 @@ var secPerFrame = 1 / 24,
 	msPerUpdate = 1000 / 24,
 	SVGNS = 'http://www.w3.org/2000/svg',
 	dotRadius = 3,
-	collisionRange = 2 * dotRadius - 1,
+	collisionRange = 2 * dotRadius,
 	updater = null,
-	ignoreLastRange = 2,
+	ignoreLastRange = 3,
 	dotSpeed = 75,
 	dotRotationalSpeed = 360;
 
+// grid based collision detection for circle-circle with same radius
+function Grid(max_width, max_height, num_rows, num_cols){
+	this.grid = [];
+	this.grid_w = max_width / num_cols;
+	this.grid_h = max_height / num_rows;
+	
+	// anonymous constructor function
+	(function (){
+		this.grid[num_rows - 1] = null;
+		for(var i = 0; i < num_rows; ++i){
+			this.grid[i] = [];
+			this.grid[i][num_cols - 1] = null;
+			for(var j = 0; j < num_cols; ++j){
+				this.grid[i][j] = [];
+			}
+		}
+	}).bind(this)();
+	
+	this.insert = function (obj){
+		// assuming x and y is always within the display box
+		// else there will be an index error
+		var row = obj.y / this.grid_h | 0,
+			col = obj.x / this.grid_w | 0;
+		
+		this.grid[row][col].push(obj);
+	};
+	
+	this.check_grid = function (grid, obj){
+		var x = obj.x,
+			y = obj.y;
+		for(var i = 0, size = grid.length; i < size; ++i){
+			if(obj != grid[i]){
+				var diff_x = x - grid[i].x,
+					diff_y = y - grid[i].y,
+					distance = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
+				
+				if(distance < collisionRange){
+					return obj.parent != grid[i].parent
+						|| !obj.ignore || !grid[i].ignore;
+				}
+			}
+		}
+		
+		return false;
+	};
+	
+	this.query = function (obj){
+		var y = obj.y,
+			x = obj.x,
+			row = y / this.grid_h | 0,
+			col = x / this.grid_w | 0;
+		
+		if(this.check_grid(this.grid[row][col], obj)){
+			return true;
+		}
+		
+		var y0 = row * this.grid_h,
+			y1 = y0 + this.grid_h,
+			x0 = col * this.grid_w,
+			x1 = x0 + this.grid_w,
+			result = false;
+		
+		if(row > 0 && y - y0 < dotRadius){
+			if(col > 0 && x - x0 < dotRadius){
+				result = this.check_grid(this.grid[row - 1][col - 1], obj, x, y, dotRadius)
+					|| this.check_grid(this.grid[row - 1][col], obj, x, y, dotRadius)
+					|| this.check_grid(this.grid[row][col - 1], obj, x, y, dotRadius);
+			} else{
+				result = this.check_grid(this.grid[row - 1][col], obj, x, y, dotRadius);
+			}
+		} else if(col > 0 && x - x0 < dotRadius){
+			result = this.check_grid(this.grid[row][col - 1], obj, x, y, dotRadius);
+		}
+		
+		if(row + 1 < num_rows && y1 - y < dotRadius){
+			if(col + 1 < num_cols && x1 - x < dotRadius){
+				result = this.check_grid(this.grid[row + 1][col + 1], obj, x, y, dotRadius)
+					|| this.check_grid(this.grid[row + 1][col], obj, x, y, dotRadius)
+					|| this.check_grid(this.grid[row][col + 1], obj, x, y, dotRadius);
+			} else{
+				result = this.check_grid(this.grid[row + 1][col], obj, x, y, dotRadius);
+			}
+		} else if(col + 1 < num_cols && x1 - x < dotRadius){
+			result = this.check_grid(this.grid[row][col + 1], obj, x, y, dotRadius);
+		}
+		
+		return result;
+	};
+}
+
 function Game(display){
 	this.display = display;
-	this.display_w = 320;
-	this.display_h = 240;
+	this.display_w = 640;
+	this.display_h = 480;
+	this.detector = new Grid(this.display_w, this.display_h, 80, 60);
 	
 	// clear SVG for new game
 	(function (){
@@ -28,6 +119,7 @@ function Game(display){
 	this.keys = {
 		_37: false, _39: false, _65: false, _68: false
 	}
+	
 	document.addEventListener('keyup', function (e){
 		switch(e.keyCode){
 			case 37:
@@ -48,6 +140,7 @@ function Game(display){
 				break;
 		}
 	}.bind(this));
+	
 	document.addEventListener('keydown', function (e){
 		switch(e.keyCode){
 			case 37:
@@ -72,8 +165,8 @@ function Game(display){
 	this.playerOne = null;
 	this.playerTwo = null;
 	this.initialize = function (){
-		this.playerOne = (new Player(this, 100, 120, '#f00', ['_37', '_39'])).initialize();
-		this.playerTwo = (new Player(this, 260, 120, '#00f', ['_65', '_68'])).initialize();
+		this.playerOne = (new Player(this, 540, 360, '#f00', ['_37', '_39'])).initialize();
+		this.playerTwo = (new Player(this, 100, 360, '#00f', ['_65', '_68'])).initialize();
 		return this;
 	}
 	
@@ -82,7 +175,7 @@ function Game(display){
 		this.playerTwo.update(delta);
 		
 		if(!this.playerOne.isAlive && !this.playerTwo.isAlive){
-			alert('Both players are drunk! :P');
+			alert('Both players crashed!!');
 		} else if(!this.playerOne.isAlive){
 			alert('Player one crashed!');
 		} else if(!this.playerTwo.isAlive){
@@ -111,7 +204,9 @@ function Player(game, x, y, color, keys){
 		dot.setAttribute('cy', y);
 		dot.setAttribute('fill', '#ff0');
 		this.display.appendChild(dot);
-		this.tracks.push({dot: dot, x: x, y: y});
+		var __o = {shape: dot, x: x, y: y, ignore: true, parent: this};
+		this.tracks.push(__o);
+		game.detector.insert(__o);
 		
 		this.head = dot;
 		return this;
@@ -144,7 +239,13 @@ function Player(game, x, y, color, keys){
 		dot.setAttribute('cx', this.position.x);
 		dot.setAttribute('cy', this.position.y);
 		this.display.appendChild(dot);
-		this.tracks.push({dot: dot, x: this.position.x, y: this.position.y});
+		var __o = {shape: dot, x: this.position.x, y: this.position.y, ignore: true, parent: this};
+		this.tracks.push(__o);
+		game.detector.insert(__o);
+		
+		if(this.tracks.length - ignoreLastRange >= 0){
+			this.tracks[this.tracks.length - ignoreLastRange].ignore = false;
+		}
 		
 		this.head.setAttribute('fill', color);
 		this.head = dot;
@@ -164,28 +265,7 @@ function Player(game, x, y, color, keys){
 			return true;
 		}
 		
-		for(var i = 0, size = this.tracks.length - ignoreLastRange; i < size; ++i){
-			var dx = this.position.x - this.tracks[i].x,
-				dy = this.position.y - this.tracks[i].y,
-				distance = Math.sqrt(dx * dx + dy * dy);
-			
-			if(distance < collisionRange){
-				return true;
-			}
-		}
-		
-		var other = this.game.playerOne == this ? this.game.playerTwo : this.game.playerOne;
-		for(var i = 0, size = other.tracks.length; i < size; ++i){
-			var dx = this.position.x - other.tracks[i].x,
-				dy = this.position.y - other.tracks[i].y,
-				distance = Math.sqrt(dx * dx + dy * dy);
-			
-			if(distance < collisionRange){
-				return true;
-			}
-		}
-		
-		return false;
+		return game.detector.query(this.tracks[this.tracks.length - 1]);
 	}
 }
 
@@ -194,6 +274,7 @@ function Player(game, x, y, color, keys){
 document.addEventListener('DOMContentLoaded', function (arg){
 	document.addEventListener('keydown', function (e){
 		if(e.keyCode == 32 && updater == null){
+			e.preventDefault();
 			var game = (new Game(document.getElementById('display'))).initialize();
 			updater = setInterval(game.update.bind(game), msPerFrame, secPerFrame);
 		}
