@@ -200,13 +200,21 @@ function Game(display){
 		// this.playerOne = (new Player(this, 540, 360, '#f00', ['_37', '_39'])).initialize();
 		// this.playerTwo = (new Player(this, 100, 360, '#00f', ['_65', '_68'])).initialize();
 		this.players[num_players - 1] = null;
+		
 		this.players[0] = (new Player(this, 540, 100, '#f00', ['_37', '_39'])).initialize();
+		this.players[0].rotation = -135;
+		
 		this.players[1] = (new Player(this, 100, 100, '#00f', ['_65', '_68'])).initialize();
+		this.players[1].rotation = 135;
+		
 		if(num_players >= 3){
 			this.players[2] = (new Player(this, 540, 380, '#0f0', ['_188', '_190'])).initialize();
+			this.players[2].rotation = -45;
 		}
+		
 		if(num_players >= 4){
 			this.players[3] = (new Player(this, 100, 380, '#0ff', ['_67', '_86'])).initialize();
+			this.players[3].rotation = 45;
 		}
 		
 		return this;
