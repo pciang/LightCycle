@@ -72,28 +72,38 @@ function Grid(max_width, max_height, num_rows, num_cols){
 			x1 = x0 + this.grid_w,
 			result = false;
 		
+		// top
 		if(row > 0 && y - y0 < dotRadius){
+			result = this.check_grid(this.grid[row - 1][col], obj);
+			// top & left
 			if(col > 0 && x - x0 < dotRadius){
-				result = this.check_grid(this.grid[row - 1][col - 1], obj, x, y, dotRadius)
-					|| this.check_grid(this.grid[row - 1][col], obj, x, y, dotRadius)
-					|| this.check_grid(this.grid[row][col - 1], obj, x, y, dotRadius);
-			} else{
-				result = this.check_grid(this.grid[row - 1][col], obj, x, y, dotRadius);
+				result = result || this.check_grid(this.grid[row - 1][col - 1], obj)
+					|| this.check_grid(this.grid[row][col - 1], obj);
 			}
+		// ~top & left
 		} else if(col > 0 && x - x0 < dotRadius){
-			result = this.check_grid(this.grid[row][col - 1], obj, x, y, dotRadius);
+			result = this.check_grid(this.grid[row][col - 1], obj);
+			// left & bot
+			if(row + 1 < num_rows && y1 - y < dotRadius){
+				result = result || this.check_grid(this.grid[row + 1][col - 1], obj);
+			}
 		}
 		
+		// bot
 		if(row + 1 < num_rows && y1 - y < dotRadius){
+			result = result || this.check_grid(this.grid[row + 1][col], obj);
+			// bot & right
 			if(col + 1 < num_cols && x1 - x < dotRadius){
-				result = this.check_grid(this.grid[row + 1][col + 1], obj, x, y, dotRadius)
-					|| this.check_grid(this.grid[row + 1][col], obj, x, y, dotRadius)
-					|| this.check_grid(this.grid[row][col + 1], obj, x, y, dotRadius);
-			} else{
-				result = this.check_grid(this.grid[row + 1][col], obj, x, y, dotRadius);
+				result = result || this.check_grid(this.grid[row + 1][col + 1], obj)
+					|| this.check_grid(this.grid[row][col + 1], obj);
 			}
+		// ~bot & right
 		} else if(col + 1 < num_cols && x1 - x < dotRadius){
-			result = this.check_grid(this.grid[row][col + 1], obj, x, y, dotRadius);
+			result = result || this.check_grid(this.grid[row][col + 1], obj);
+			// right & top
+			if(row > 0 && y - y0 < dotRadius){
+				result = result || this.check_grid(this.grid[row - 1][col + 1], obj);
+			}
 		}
 		
 		return result;
