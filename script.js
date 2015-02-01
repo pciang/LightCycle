@@ -4,7 +4,7 @@ var secPerFrame = 1 / 24,
 	msPerUpdate = 1000 / 24,
 	SVGNS = 'http://www.w3.org/2000/svg',
 	dotRadius = 3,
-	collisionRange = 2 * dotRadius,
+	collisionRange = 2 * dotRadius - 1,
 	updater = null,
 	ignoreLastRange = 3,
 	dotSpeed = 75,
@@ -333,10 +333,10 @@ function Player(game, x, y, color, keys){
 	}
 	
 	this.checkCollision = function (){
-		if(this.position.x < dotRadius
-			|| this.position.y < dotRadius
-			|| this.game.display_w - this.position.x < dotRadius
-			|| this.game.display_h - this.position.y < dotRadius){
+		if(this.position.x < dotRadius - 1
+			|| this.position.y < dotRadius - 1
+			|| this.game.display_w - this.position.x < dotRadius - 1
+			|| this.game.display_h - this.position.y < dotRadius - 1){
 			return true;
 		}
 		
