@@ -8,7 +8,7 @@ var secPerFrame = 1 / 24,
 	updater = null,
 	ignoreLastRange = 3,
 	dotSpeed = 75,
-	dotRotationalSpeed = 360;
+	dotRotationalSpeed = 270;
 
 // grid based collision detection for circle-circle with same radius
 function Grid(max_width, max_height, num_rows, num_cols){
