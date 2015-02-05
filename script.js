@@ -3,8 +3,9 @@ var secPerFrame = 1 / 24,
 	msPerFrame = 1000 / 24,
 	msPerUpdate = 1000 / 24,
 	SVGNS = 'http://www.w3.org/2000/svg',
-	dotRadius = 3,
-	collisionRange = 2 * dotRadius - 1,
+	dotRadius = 2,
+	collisionRange = 2 * dotRadius,
+	collisionTolerance = 1,
 	updater = null,
 	ignoreLastRange = 3,
 	dotSpeed = 75,
@@ -79,30 +80,49 @@ function Grid(max_width, max_height, num_rows, num_cols){
 			if(col > 0 && x - x0 < dotRadius){
 				result = result || this.check_grid(this.grid[row - 1][col - 1], obj)
 					|| this.check_grid(this.grid[row][col - 1], obj);
+			// top & right
+			} else if(col + 1 < num_cols && x1 - x < dotRadius){
+				result = result || this.check_grid(this.grid[row - 1][col + 1], obj)
+					|| this.check_grid(this.grid[row][col + 1], obj);
 			}
-		// ~top & left
+		
+		// left
 		} else if(col > 0 && x - x0 < dotRadius){
 			result = this.check_grid(this.grid[row][col - 1], obj);
 			// left & bot
 			if(row + 1 < num_rows && y1 - y < dotRadius){
-				result = result || this.check_grid(this.grid[row + 1][col - 1], obj);
+				result = result || this.check_grid(this.grid[row + 1][col - 1], obj)
+					|| this.check_grid(this.grid[row + 1][col], obj);
+			// left & top
+			} else if(row > 0 && y - y0 < dotRadius){
+				result = result || this.check_grid(this.grid[row - 1][col - 1], obj)
+					|| this.check_grid(this.grid[row - 1][col], obj);
 			}
-		}
 		
 		// bot
-		if(row + 1 < num_rows && y1 - y < dotRadius){
+		} else if(row + 1 < num_rows && y1 - y < dotRadius){
 			result = result || this.check_grid(this.grid[row + 1][col], obj);
 			// bot & right
 			if(col + 1 < num_cols && x1 - x < dotRadius){
 				result = result || this.check_grid(this.grid[row + 1][col + 1], obj)
 					|| this.check_grid(this.grid[row][col + 1], obj);
+			// bot & left
+			} else if(col > 0 && x - x0 < dotRadius){
+				result = result || this.check_grid(this.grid[row + 1][col - 1], obj)
+					|| this.check_grid(this.grid[row][col - 1], obj);
 			}
-		// ~bot & right
+		
+		// right
 		} else if(col + 1 < num_cols && x1 - x < dotRadius){
 			result = result || this.check_grid(this.grid[row][col + 1], obj);
 			// right & top
 			if(row > 0 && y - y0 < dotRadius){
-				result = result || this.check_grid(this.grid[row - 1][col + 1], obj);
+				result = result || this.check_grid(this.grid[row - 1][col + 1], obj)
+					|| this.check_grid(this.grid[row - 1][col], obj);
+			// right & bot
+			} else if(row + 1 < num_rows && y1 - y < dotRadius){
+				result = result || this.check_grid(this.grid[row + 1][col + 1], obj)
+					|| this.check_grid(this.grid[row + 1][col], obj);
 			}
 		}
 		
@@ -211,11 +231,11 @@ function Game(display){
 		// this.playerTwo = (new Player(this, 100, 360, '#00f', ['_65', '_68'])).initialize();
 		this.players[num_players - 1] = null;
 		
-		this.players[0] = (new Player(this, 540, 100, '#f00', ['_37', '_39'])).initialize();
-		this.players[0].rotation = -135;
+		this.players[1] = (new Player(this, 540, 100, '#f00', ['_37', '_39'])).initialize();
+		this.players[1].rotation = -135;
 		
-		this.players[1] = (new Player(this, 100, 100, '#00f', ['_65', '_68'])).initialize();
-		this.players[1].rotation = 135;
+		this.players[0] = (new Player(this, 100, 100, '#00f', ['_65', '_68'])).initialize();
+		this.players[0].rotation = 135;
 		
 		if(num_players >= 3){
 			this.players[2] = (new Player(this, 540, 380, '#0f0', ['_188', '_190'])).initialize();
@@ -236,12 +256,18 @@ function Game(display){
 			if(this.players[i].isAlive){
 				this.players[i].update(delta);
 			}
+		}
+		for(var i = 0, num_players = this.players.length; i < num_players; ++i){
+			if(this.players[i].isAlive){
+				this.players[i].isAlive = !this.players[i].checkCollision();
+			}
 			if(!this.players[i].isAlive){
-				crashes.push(i + 1);
+				crashes.push(i);
 			}
 		}
 		
 		if(crashes.length == this.players.length - 1){
+			console.log(this.players[0].position, this.players[1].position);
 			if(this.players[0].isAlive){
 				alert('Player 1 wins!');
 			} else if(this.players[1].isAlive){
@@ -311,7 +337,7 @@ function Player(game, x, y, color, keys){
 			this.rotation += 360;
 		
 		this.position = this.position.matrixTransform(T);
-		dot.setAttribute('r', dotRadius);
+		dot.setAttribute('r', dotRadius + collisionTolerance);
 		dot.setAttribute('fill', '#ff0');
 		dot.setAttribute('cx', this.position.x);
 		dot.setAttribute('cy', this.position.y);
@@ -326,17 +352,13 @@ function Player(game, x, y, color, keys){
 		
 		this.head.setAttribute('fill', color);
 		this.head = dot;
-		
-		if(this.checkCollision()){
-			this.isAlive = false;
-		}
 	}
 	
 	this.checkCollision = function (){
-		if(this.position.x < dotRadius - 1
-			|| this.position.y < dotRadius - 1
-			|| this.game.display_w - this.position.x < dotRadius - 1
-			|| this.game.display_h - this.position.y < dotRadius - 1){
+		if(this.position.x < dotRadius
+			|| this.position.y < dotRadius
+			|| this.game.display_w - this.position.x < dotRadius
+			|| this.game.display_h - this.position.y < dotRadius){
 			return true;
 		}
 		
@@ -348,9 +370,10 @@ document.addEventListener('DOMContentLoaded', function (arg){
 	document.addEventListener('keydown', function (e){
 		if(e.keyCode == 32 && updater == null){
 			e.preventDefault();
-			var num_players = parseInt(prompt("Please enter the number of player!\n*At least 2, and at most 4", "2")),
+			var num_players = parseInt(prompt("Please enter the number of player!\n*At least 2, and at most 4",
+					sessionStorage['num_players'] ? sessionStorage['num_players'] : 2)),
 				game = (new Game(document.getElementById('display'))).initialize(
-					Math.min(Math.max(4, num_players), Math.min(Math.max(2, num_players), 4))
+					sessionStorage['num_players'] = Math.min(Math.max(4, num_players), Math.min(Math.max(2, num_players), 4))
 				);
 			updater = setInterval(game.update.bind(game), msPerFrame, secPerFrame);
 		}
