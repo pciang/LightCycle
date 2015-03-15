@@ -1,4 +1,4 @@
-# [LightCycle](https://rawgit.com/pciang/LightCycle/master/index.html)
+# <a href="https://rawgit.com/pciang/LightCycle/master/index.html" target="_blank">Lightcycle</a>
 Simple LightCycle created with HTML5 SVG + JS. Support up to 4 players at once!
 
 ## Controls
